@@ -1,28 +1,37 @@
 import {useEffect, useState} from 'react'
 import Janus from "./assets/janus.js";
+import janus from "./assets/janus.js";
+import adapter from "webrtc-adapter";
 
 import './App.css'
 
 let localVideo = null;
 let localStream = null;
+let remoteVideo = null;
+let remoteStream = null;
 
-let janus = null
-let clientId = null
+let janusInst = null
 let videoCallPluginHandle = null;
 
-// 1、初始化 Janus，使用 videoCallPluginHandle 管理整个会话
+// 1、初始化 Janus，使用 videoCallPluginHandle 管理整个会话（发起通话、发送 dataChannel 数据）
 // 2、发送 register 消息注册到 Janus
 // 3、发送 call 消息，请求通话
 
 function App() {
-	const [targetId, setTargetId] = useState();
+	const [clientId, setClientId] = useState('');
+	const [targetId, setTargetId] = useState('');
 
 	// ======================================================================================= Janus
 
 	function initJanus () {
 
-		janus = new Janus({
-			server: 'http://localhost:8088/janus',
+		janus.init({
+			debug: true,
+			dependencies: Janus.useDefaultDependencies({ adapter: adapter }),
+		})
+
+		janusInst = new Janus({
+			server: 'http://192.168.116.54:8088/janus',
 			success: () => {
 				console.log('new Janus success')
 				initPluginHandle();
@@ -40,10 +49,12 @@ function App() {
 		console.log('initPluginHandle')
 
 		// client unique Id
-		clientId = Janus.randomString(8);
-		console.log(clientId)
+		const randomId = Janus.randomString(8);
+		console.log('clientId', randomId)
 
-		janus.attach({
+		setClientId(randomId)
+
+		janusInst.attach({
 			opaqueId: clientId,
 			plugin: 'janus.plugin.videocall',
 			success: pluginHandle => {
@@ -57,6 +68,11 @@ function App() {
 				// msg 交互信息：create/join/stop
 				// jsep：协商信令
 				onMessage(msg, jsep)
+			},
+			ondata: data => {
+				// data has been received through the Data Channel;
+				console.log(':: Received data ::')
+				console.log(data)
 			},
 			onlocaltrack: (track, added) => {
 				console.log('onlocaltrack')
@@ -79,6 +95,26 @@ function App() {
 		console.log('::: Received Message :::')
 		console.log(msg)
 		const result = msg['result']
+		if (result) {
+
+			let event = null;
+			if (event = result.event) {
+				switch (event) {
+					case 'incomingcall':
+						createAnswer(jsep)
+						break;
+					case 'accepted':
+						onAccepted(jsep)
+						break;
+					case 'update':
+						break;
+					case 'hangup':
+						break;
+					default:
+						break;
+				}
+			}
+		}
 		// if (result) {
 		// 	if (result["list"]) {
 		// 		let list = result["list"];
@@ -173,7 +209,7 @@ function App() {
 	}
 
 	const getDisplay = () => {
-		let constrain = { video: true, audio: true }
+		let constrain = { video: true, audio: false }
 
 		navigator.mediaDevices.getDisplayMedia(constrain).then(stream => {
 			localVideo = document.getElementById('localVideo')
@@ -185,10 +221,11 @@ function App() {
 		})
 	}
 
-
-
 	const initJanusClick = () => {
 		initJanus();
+	}
+
+	const registerClick = () => {
 		registerToJanus()
 	}
 
@@ -199,15 +236,25 @@ function App() {
 		}
 
 		videoCallPluginHandle.send({message: register})
+		console.log('register: ', clientId)
 	}
 
 	const call = () => {
+		createOffer();
+	}
+
+	const createOffer = () => {
 		videoCallPluginHandle.createOffer({
 			// video + audio + datachannel
 			tracks: [
-				{ type: 'audio', capture: true, recv: true },
-				{ type: 'video', capture: true, recv: true, simulcast: false },
-				{ type: 'data' },
+				{
+					type: 'screen', // must be one of "audio", "video", "screen" and "data";
+					// capture: in case something must be captured (e.g., a microphone for "audio" or a "webcam" for video),
+					// passing true asks for the default device,
+					// but getUserMedia (for audio/video) or getDisplayMedia (for screen sharing) constraints can be passed as well as objects
+					capture: navigator.mediaDevices.getDisplayMedia({video: true, audio: false}),
+				},
+				{ type: 'data' }
 			],
 			success: jsep => {
 				const body = {
@@ -227,17 +274,82 @@ function App() {
 		})
 	}
 
+	const createAnswer = (jsep) => {
+		videoCallPluginHandle.createAnswer({
+			jsep,
+			tracks: [
+				{
+					type: 'screen',
+					capture: navigator.mediaDevices.getDisplayMedia({video: true, audio: false}),
+				},
+				{ type: 'data' }
+			],
+			success: innerJsep => {
+				const body = {
+					request: 'accept'
+				}
+				videoCallPluginHandle.send({
+					message: body,
+					jsep: innerJsep
+				})
+			},
+			error: err => {
+				console.log('createAnswer error: ', err)
+			}
+		})
+	}
+
+	const onAccepted = (jsep) => {
+		console.log('onAccepted jsep: ', jsep)
+		if (jsep) {
+			videoCallPluginHandle.handleRemoteJsep({
+				jsep
+			})
+		}
+	}
+
+	const sendToDataChannel = param => {
+		console.log(param)
+		// data(parameters): sends data through the Data Channel, if available;
+		videoCallPluginHandle.data({
+			data: param
+		})
+	}
+
+	const callClick = () => {
+		call()
+	}
+
 	const onTargetChange = evt => {
 		setTargetId(evt.target.value)
+	}
+
+	// const checkStream = () => {
+	// 	console.log(localStream.getAudioTracks());
+	// 	console.log(localStream.getVideoTracks());
+	// }
+
+	let sendData = null;
+	const onDataChange = evt => {
+		sendData = evt.target.value
+	}
+
+	const sendDataClick = () => {
+		sendToDataChannel(sendData)
 	}
 
 	return (
 		<>
 			<div>
+				<p>clientId: {clientId}</p>
 				<button onClick={getDisplay}>getDisplay</button>
+				{/*<button onClick={checkStream}>checkStream</button>*/}
 				<button onClick={initJanusClick}>initJanus</button>
-				<input type={"text"} onChange={onTargetChange}/>
+				<button onClick={registerClick}>register</button>
+				<p>targetId: <input type={"text"} onChange={onTargetChange}/><button onClick={callClick}>call</button></p>
+				<p>dataChannel: <input type={"text"} onChange={onDataChange}/><button onClick={sendDataClick}>sendData</button></p>
 				<video id={"localVideo"} autoPlay muted width={"720px"} height={"640px"}></video>
+				<video id={"remoteVideo"} autoPlay muted width={"720px"} height={"640px"}></video>
 			</div>
 		</>
 	)
