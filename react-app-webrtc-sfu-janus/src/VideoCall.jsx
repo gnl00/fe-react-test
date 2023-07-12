@@ -31,7 +31,7 @@ function VideoCall() {
 		})
 
 		janusInst = new Janus({
-			server: 'http://192.168.116.54:8088/janus',
+			server: 'http://localhost:8088/janus',
 			success: () => {
 				console.log('new Janus success')
 				initPluginHandle();
