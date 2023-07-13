@@ -464,7 +464,11 @@ function publishOwnFeed(useAudio) {
 
 	sfutest.createOffer(
 		{
-			tracks: tracks,
+			tracks: [
+				{
+					type: 'screen', capture: navigator.mediaDevices.getDisplayMedia({audio: false, video: true})
+				}
+			],
 			customizeSdp: function(jsep) {
 				// If DTX is enabled, munge the SDP
 				if(doDtx) {

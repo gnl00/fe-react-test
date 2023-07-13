@@ -467,7 +467,9 @@ function publishOwnFeed(useAudio) {
 
 	sfutest.createOffer(
 		{
-			tracks: tracks,
+			tracks: [
+				{type: 'screen', capture: navigator.mediaDevices.getDisplayMedia({audio: false, video: true})}
+			],
 			success: function(jsep) {
 				Janus.debug("Got publisher SDP!");
 				Janus.debug(jsep);
