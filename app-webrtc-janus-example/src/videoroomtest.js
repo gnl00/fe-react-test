@@ -572,6 +572,9 @@ function newRemoteFeed(id, display, streams) {
 					use_msid: use_msid,
 					private_id: mypvtid
 				};
+
+				console.log('subscription ', subscription)
+
 				remoteFeed.send({ message: subscribe });
 			},
 			error: function(error) {

@@ -4,6 +4,7 @@ import janus from "./assets/janus.js";
 import adapter from "webrtc-adapter";
 
 import './App.css'
+import './VideoRoom.css'
 
 // 1、初始化 Janus，无需注册，加入 room 返回唯一 id。
 // 2、publisher 发布视频流的同时会 createOffer（和 Janus 服务器连接）WebRTC 流会直接上传到 Janus 服务器。
@@ -11,31 +12,25 @@ import './App.css'
 // 值得注意的是：createOffer 和 createAnswer 不是在同一个 pluginHandle 上进行的；publisher 的 pluginHandle 负责执行 createOffer；subscriber 的 pluginHandle 负责 createAnswer。
 // 当然也可以在一次操作中同时进行 publish 和 subscribe 操作，但是要注意将两个不同的 pluginHandle 区分
 
-let localVideo = null;
-let localStream = null;
-let remoteVideo = null;
-let remoteStream = null;
+let iceServers = null
+let opaqueId = null
 
 let janusInst = null
 let videoRoomPluginHandle = null
-let subscribePluginHandle = null
-let feedStreams = {}
-let gRoomId = -1
 
-const subscribe_mode = 'subscriber'
-let opaqueId = null
-let iceServers = null
+let globalRoomId = -1
+let globalPublisherIds = []
+let subscribe_mode = false;
 
 function VideoRoom() {
 	const [clientId, setClientId] = useState(-1);
 	const [roomId, setRoomId] = useState(-1);
-	const [feedId, setFeedId] = useState(-1);
-	const [character, setCharacter] = useState('publisher');
+	const [subscribeMode, setSubscribeMode] = useState(false);
+	const [publisherIds, setPublisherIds] = useState([])
 
 	// ======================================================================================= Janus
 
 	function initJanus () {
-
 		janus.init({
 			debug: true,
 			dependencies: Janus.useDefaultDependencies({ adapter: adapter }),
@@ -106,10 +101,7 @@ function VideoRoom() {
 				}
 			},
 			onremotetrack: (track, mid, added) => {
-				console.log('onremotetrack')
-				if (added) {
-					setVideoTrack('remoteVideo', track)
-				}
+				console.log('onremotetrack publisher', track, mid, added)
 			},
 			oncleanup: () => {},
 			detach: () => {}
@@ -125,7 +117,7 @@ function VideoRoom() {
 	}
 
 	const onMessage = (msg, jsep) => {
-		console.log('::: Received Message :::')
+		console.log('::: Publisher Received Message :::')
 		console.log(msg)
 		const event = msg['videoroom']
 		if (event) {
@@ -136,33 +128,31 @@ function VideoRoom() {
 					setClientId(id)
 					console.log(`client:  ${id} joined`)
 
-					// if there are any publishers
-					// save publisher info
+					// collect publishers
 					publishers = msg["publishers"]
+					console.log('publishers ', publishers)
 					if (publishers) {
-						savePublishersInfo(publishers)
-
-						// character check
-						if (character === subscribe_mode) subscribeFeeds()
+						savePublisherIds(publishers)
 					}
 
 					break;
 				case 'event':
-					let streams = null
-					if (streams = msg['streams']) {
-						streams.forEach(stream => {
-							stream['id'] = clientId
-						})
-						feedStreams[clientId] = streams
-					}
-
 					// received publish event
 					// save publisher info
 					publishers = msg["publishers"]
 					if (publishers) {
-						savePublishersInfo(publishers)
-						subscribeFeeds()
+						savePublisherIds(publishers)
 					}
+
+					let unpublishedId = -1
+					if (unpublishedId = msg['unpublished']) {
+						removePublisherId(unpublishedId)
+						removeRemoteVideoDom(unpublishedId)
+					}
+
+					let leftId = -1
+					if (leftId = msg['leaving']) {}
+
 					break;
 				default:
 					break;
@@ -177,6 +167,7 @@ function VideoRoom() {
 	const setVideoTrack = (videoDomId, track) => {
 		const videoDom = document.getElementById(videoDomId);
 		let stream = videoDom.srcObject
+		console.log('setVideoTrack stream ', stream)
 		if (stream) {
 			stream.addTrack(track)
 		} else {
@@ -188,41 +179,60 @@ function VideoRoom() {
 		}
 	}
 
-	const createVideoDom = (feedId, track) => {
-		const createdDom = document.createElement('video');
-		const stream = new MediaStream();
-		stream.addTrack(track)
-		createdDom.width = '720px';
-		createdDom.height = '680px'
-		createdDom.srcObject = stream
-		createdDom.controls = false
-		createdDom.autoplay = true
+	const createVideoDom = (track, feedId) => {
+		const videoDomId = "remoteVideo-" + feedId;
 
-		const videoArea = document.getElementById('videoArea')
-		videoArea.appendChild(createdDom)
+		console.log('createVideoDom domId ', videoDomId)
+
+		const remoteVideoDom = document.getElementById(videoDomId)
+		if (remoteVideoDom) {
+			const stream = remoteVideoDom.srcObject;
+			stream.addTrack(track)
+		} else {
+			const createdDom = document.createElement('video');
+			const stream = new MediaStream();
+			stream.addTrack(track)
+			createdDom.style.width = '720px';
+			createdDom.style.height = 'auto'
+			createdDom.srcObject = stream
+			createdDom.controls = false
+			createdDom.autoplay = true
+			createdDom.id = videoDomId
+
+			const videoArea = document.getElementById('videoArea')
+			videoArea.appendChild(createdDom)
+		}
 	}
 
-	const savePublishersInfo = publishers => {
+	const savePublisherIds = publishers => {
+		console.log('savePublishersInfo')
+		const pubIds = []
 		publishers.forEach(pub => {
-			// {id, streams, video_codec}
-			const id = pub['id']
-			const streams = pub['streams']
-			feedStreams[id] = streams
+			const publisherId = pub.id;
+			pubIds.push(publisherId)
 		})
 
-		console.log(feedStreams)
+		globalPublisherIds.push(...pubIds)
+		setPublisherIds([...globalPublisherIds])
+		console.log('globalPublisherIds', globalPublisherIds)
 	}
 
-	/**
-	 * subscribe feeds
-	 * @param Array publishers
-	 */
-	const subscribeFeeds = () => {
-		console.log('subscribeFeeds')
-		initSubscriberPluginHandle();
+	const removePublisherId = (targetId) => {
+		let removeIdx = -1
+		if ((removeIdx = globalPublisherIds.indexOf(targetId)) < 0) return
+		globalPublisherIds.splice(removeIdx, 1)
+		setPublisherIds([...globalPublisherIds])
+		console.log('globalPublisherIds', globalPublisherIds)
 	}
 
-	const initSubscriberPluginHandle = () => {
+	const removeRemoteVideoDom = (publisherId) => {
+		const remoteDomId = 'remoteVideo-' + publisherId;
+		const remoteDom = document.getElementById(remoteDomId);
+		if (remoteDom) remoteDom.remove()
+	}
+
+	const initSubscriberPluginHandle = (feedId) => {
+		let subscribePluginHandle = null;
 		janusInst.attach({
 			opaqueId: opaqueId,
 			plugin: 'janus.plugin.videoroom',
@@ -232,15 +242,15 @@ function VideoRoom() {
 				console.log(' -- This is a subscriber --')
 
 				let streams = []
-				for (const feedId in feedStreams) {
-					streams.push({
-						feed: Number.parseInt(feedId)
-					})
-				}
+				streams.push({
+					feed: Number.parseInt(feedId),
+				})
+
+				console.log('subscribe streams: ', streams)
 
 				const subscribe = {
 					request: 'join',
-					room: gRoomId,
+					room: globalRoomId,
 					ptype: "subscriber",
 					streams
 				}
@@ -268,7 +278,7 @@ function VideoRoom() {
 				console.log('Janus ' + (on? 'start':'stop') + ' receiving media')
 			},
 			onmessage: (msg, jsep) => {
-				console.log('::: Subscriber received :::')
+				console.log('::: Subscriber Received Message :::')
 				console.log(msg)
 
 				let event = null
@@ -278,7 +288,6 @@ function VideoRoom() {
 							break;
 						default:
 							break;
-
 					}
 				}
 
@@ -287,12 +296,14 @@ function VideoRoom() {
 					subscribePluginHandle.createAnswer({
 						jsep,
 						tracks: [
-							{type: 'data'}
+							{
+								type: 'data'
+							}
 						],
 						success: innerJsep => {
 							const message = {
 								request: 'start',
-								room: gRoomId
+								room: globalRoomId
 							}
 							subscribePluginHandle.send({message, jsep: innerJsep})
 						}
@@ -311,13 +322,16 @@ function VideoRoom() {
 				}
 			},
 			onremotetrack: (track, mid, added) => {
-				console.log('onremotetrack')
-				console.log(track)
+				console.log('onremotetrack ', track, mid, added)
 				if (added) {
-					setVideoTrack('remoteVideo', track)
+					createVideoDom(track, feedId)
 				}
 			}
 		})
+	}
+
+	const newRemoteFeed = (feedId) => {
+		initSubscriberPluginHandle(feedId);
 	}
 
 	const createRoom = () => {
@@ -347,14 +361,6 @@ function VideoRoom() {
 			notify_joining: true,
 			token: 'adminpwd'
 		}
-
-		// if (character === subscribe_mode) {
-		// 	message['streams'] = [
-		// 		{
-		// 			feed: feedId
-		// 		}
-		// 	]
-		// }
 
 		console.log('ready to send: ', message)
 
@@ -394,42 +400,6 @@ function VideoRoom() {
 		})
 	}
 
-	const createAnswer = (receivedJsep) => {
-		videoRoomPluginHandle.createAnswer({
-			jsep: receivedJsep,
-			success: innerJsep => {
-				const body = {
-					request: 'start',
-					room: roomId
-				}
-				videoRoomPluginHandle.send({
-					message: body,
-					jsep: innerJsep
-				})
-			},
-			error: err => {
-				console.log('createAnswer error: ', err)
-			}
-		})
-	}
-
-	const sendToDataChannel = param => {
-		console.log(param)
-		// data(parameters): sends data through the Data Channel, if available;
-		videoRoomPluginHandle.data({
-			data: param
-		})
-	}
-
-	let sendData = null;
-	const onDataChange = evt => {
-		sendData = evt.target.value
-	}
-
-	const sendDataClick = () => {
-		sendToDataChannel(sendData)
-	}
-
 	const initJanusClick = () => {
 		initJanus();
 	}
@@ -439,8 +409,8 @@ function VideoRoom() {
 	}
 
 	const onRoomChange = evt => {
-		gRoomId = Number.parseInt(evt.target.value)
-		setRoomId(gRoomId)
+		globalRoomId = Number.parseInt(evt.target.value)
+		setRoomId(globalRoomId)
 	}
 
 	const joinRoomClick = () => {
@@ -465,20 +435,21 @@ function VideoRoom() {
 		createOffer()
 	}
 
-	const onCharacterChange = evt => {
-		const char = evt.target.value
-		setCharacter(char)
+	const onModeChange = evt => {
+		subscribe_mode = evt.target.checked
+		setSubscribeMode(subscribe_mode)
 	}
 
-	const onFeedIdChange = evt => {
-		setFeedId(Number.parseInt(evt.target.value))
+	const onPublisherBtnClick = (evt, val) => {
+		newRemoteFeed(val)
 	}
 
 	return (
 		<>
-			<div>
+			<div style={{width: "720px"}}>
 				<p>clientId: {clientId}</p>
 				<p>roomId: {roomId}</p>
+
 				<button onClick={initJanusClick}>connectToJanus</button>
 
 				<br/>
@@ -486,37 +457,45 @@ function VideoRoom() {
 				<button onClick={listRoomsClick}>list Rooms</button>
 
 				<br /><br />
-				<label >Choose a your character: </label>
-				<select id="pet-select" onChange={onCharacterChange}>
-					<option value="publisher">publisher</option>
-					<option value="subscriber">subscriber</option>
-				</select>
-				<br /><br />
+				subscribe mode: <input type={"checkbox"} onChange={onModeChange} checked={subscribe_mode}/>
+				<br />
 
 				<p>
 					join roomId: <input type={"text"} onChange={onRoomChange}/>
-					{
-						character === subscribe_mode ?
-						<>
-							&nbsp; feedId: <input type={"text"} onChange={onFeedIdChange}/>
-						</> :
-						<></>
-					}
 					<br></br>
 					<button onClick={joinRoomClick}>join</button>
 					<button onClick={listParticipantsClick}>list Participants</button>
 				</p>
 
 				{
-					character !== subscribe_mode ?
+					!subscribeMode ?
 						<>
 							<button onClick={publishClick}>publish</button>
 						</>:<></>
 				}
-				<p>dataChannel: <input type={"text"} onChange={onDataChange}/><button onClick={sendDataClick}>sendData</button></p>
+
+				{
+					subscribeMode?
+						<>
+							<span>Click the feed below to subscribe</span><br/>
+							{
+								publisherIds?.map((val) => {
+									return (
+										<button className={"btn-publisher"} key={val} onClick={evt => {onPublisherBtnClick(evt, val)}}>{val}</button>
+									)
+								})
+							}
+						</>
+						:<></>
+				}
+
 				<div id={"videoArea"}>
-					<video id={"localVideo"} autoPlay muted width={"720px"} height={"640px"}></video>
-					<video id={"remoteVideo"} autoPlay muted width={"720px"} height={"640px"}></video>
+					{
+						subscribeMode?<></>:
+							<>
+								<video id={"localVideo"} autoPlay muted width={"720px"} height={"auto"} />
+							</>
+					}
 				</div>
 			</div>
 		</>
