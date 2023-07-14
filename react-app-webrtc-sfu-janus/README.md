@@ -275,6 +275,8 @@ SFU 服务器：
 * Jitsi
 
 * Medooze
+
+* ossrs
   
   
 
@@ -539,7 +541,127 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 
 
 
+## SRS
 
+> [OS SRS 官网](https://ossrs.net/lts/zh-cn/)
+> 
+> [Github 主页](https://github.com/ossrs/srs.git)
+
+SRS（Simple Realtime Server）是一个简单高效的实时视频服务器，支持 RTMP、WebRTC、HLS、HTTP-FLV、SRT 等多种实时流媒体协议。
+
+> srs 提供 源码编译、docker、k8s 支持。
+
+
+### 架构
+
+![SRS Overview](./images\0aa7c0eb-b4f4-420d-9205-ef5a34f9856b.png)
+
+加入 SRS 服务之后整个架构流程如上图所示，目前暂时先不考虑存储，我们只需要关注架构中的上面那一层。媒体流从 Live Streaming Clients => SRS Server => WebRTC Clients。
+
+
+
+### 上手
+
+1、首先从 github 上拉取项目，我们需要其中的配置文件
+
+2、拉取镜像
+
+`docker pull ossrs/srs`
+
+3、启动 srs 服务
+
+```shell
+# --rm 参数有点“阅后即焚”的意思，停止即删除容器
+# 指定使用 docker.conf 配置文件来启动
+docker run --name=srs -d --rm -it -p 1935:1935 -p 1985:1985 -p 8080:8080 ossrs/srs:latest ./objs/srs -c conf/docker.conf
+```
+
+4、安装 ffmpeg，[ffmpeg 下载](https://ffmpeg.org/download.html)
+
+5、使用 ffmpeg 命令，将本地媒体文件推流至 srs 服务器
+
+```bash
+ffmpeg -re -i ./input.flv -c copy -f flv rtmp://localhost/live/livestream
+# 加上参数 -stream_loop -1 表示循环推送
+ffmpeg -re -stream_loop -1 -i input.flv -c copy -f flv rtmp://localhost/live/livestream
+
+# 推流成功后可以尝试使用 ffmpeg 拉流
+ffplay rtmp://localhost/live/livestream
+```
+
+6、打开 `http://localhost:8080/`，进入 srs 控制台，连接 srs
+
+![d5f064f3-7d57-49a0-a1df-0cdd95ea0d31](./images/d5f064f3-7d57-49a0-a1df-0cdd95ea0d31.png)
+
+7、点击视频流，并预览
+
+![4ed7f303-4974-4c5a-bf5b-1285df1668c4](./images/4ed7f303-4974-4c5a-bf5b-1285df1668c4.png)
+
+8、播放视频
+
+![55782c59-544e-4e98-bee5-cf49dfa26ca4](./images/55782c59-544e-4e98-bee5-cf49dfa26ca4.png)
+
+9、如果配置文件中开启了 rtmp2rtc 支持，还可以选择以 webrtc 的形式预览（如果使用域名无法播放，尝试使用 IP 来播放）
+
+![1a2c91a6-4cec-4669-b7da-29468bbddcec](./images/1a2c91a6-4cec-4669-b7da-29468bbddcec.png)
+
+
+
+
+
+### 踩坑
+
+1、rtmp to webrtc
+
+在使用 docker 运行的时候，命令如下
+
+```bash
+docker run --rm --name=srs -it -p 1935:1935 -p 1985:1985 -p 8080:8080 -p 1990:1990 -p 8088:8088 -d -p 8000:8000/udp --env CANDIDATE=192.168.2.201 ossrs/srs:latest ./objs/srs -c conf/docker.conf
+```
+
+注意看：
+
+* 使用 RTC 播放，在点击播放视频之后需要等几秒钟才有画面显示。
+
+* 命令行中指定的 `CANDIDATE` 需要是本机的 IP 或者服务器的公网 IP；如果使用域名无法进行播放，尝试将连接修改成 `CANDIDATE` 中指定的 IP。
+
+* 还要注意指定的配置文件中是否开启了 `rtmp_to_rtc` 或者 `rtc_to_rtmp` 支持（需要 `4.x` 版本以上才支持）。
+  
+  ```
+  rtc {
+      enabled on;
+      # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtmp-to-rtc
+      rtmp_to_rtc on;
+      # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtc-to-rtmp
+      rtc_to_rtmp on;
+  }
+  ```
+
+<br />
+
+
+
+### 关于 http 和 webrtc 的流畅度
+
+RTMP 推流到 SRS 使用 WebRTC 播放是常见的用法，RTMP 是 30 帧，WebRTC 只有 10 帧，看起来就会卡顿不流畅。
+
+> ossrs 官方有一个排查[方法说明](https://ossrs.net/lts/zh-cn/docs/v4/tutorial/srs-faq)
+
+
+
+看到一个 http 和 webrtc 流畅度的 [github issue](https://github.com/ossrs/srs/issues/2484) 讨论，总结如下：
+
+> RTC 主要是 100 毫秒左右的延迟，用于通话，交流场景。由于延迟很低，所以很多技术点是不同的，第一次看到的画面肯定比直播要慢一些，卡顿率也肯定会上升一些。
+> 
+> 用 RTC 做直播，一般延迟会在 800 毫秒左右。比 RTC 延迟大，比直播（协议）的延迟低。相对比较均衡，目前阿里 RTC 和腾讯快直播都是这种类型。但是，和直播（协议）相比，肯定也会有点点细微差异。
+> 
+> 直播（协议）首屏快，延迟 3 秒左右，卡顿率低很流畅。但是 WebRTC 为什么延迟低了会卡？
+> 
+> 1、首屏：打开就能看，直播 > 低延迟直播 > RTC；
+> 
+> 2、流畅度：播放过程不卡，直播 > 低延迟直播 > RTC；
+> 
+> 3、低延迟：能通话，RTC > 低延迟直播 > 直播
 
 
 
@@ -550,3 +672,5 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 * https://zhuanlan.zhihu.com/p/602229179
 
 * https://juejin.cn/post/7189829515265179705
+
+* https://ossrs.net/lts/zh-cn/
