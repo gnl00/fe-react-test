@@ -10,7 +10,9 @@ WebRTC（Web Real-Time Communications）是一项实时通讯技术，它允许�
 
 ### ICE
 
-WebRTC 连接是在 **ICE 协议框架**的基础之上建立的。ICE（Interactive Connectivity Establishment，交互式连接创建）是一个允许你的浏览器和对端浏览器建立连接的协议框架。<br />在实际的网络当中，有很多原因能导致简单的从 A 端到 B 端直连不能如愿完成。这需要绕过阻止建立连接的防火墙，给你的设备分配一个唯一可见的地址（通常情况下我们的大部分设备没有一个固定的公网地址），如果路由器不允许主机直连，还得通过一台服务器（TURN）转发数据。
+WebRTC 连接是在 **ICE 协议框架**的基础之上建立的。ICE（Interactive Connectivity Establishment，交互式连接创建）是一个允许你的浏览器和对端浏览器建立连接的协议框架。<br />
+
+在实际的网络当中，有很多原因能导致简单的从 A 端到 B 端直连不能如愿完成。这需要绕过阻止建立连接的防火墙，给你的设备分配一个唯一可见的地址（通常情况下我们的大部分设备没有一个固定的公网地址），如果路由器不允许主机直连，还得通过一台服务器（TURN）转发数据。
 
 ICE 协议框架通过使用以下几种技术完成上述工作：
 
@@ -29,7 +31,9 @@ NAT（Network Address Translation，网络地址转换协议）用来给你的�
 
 ### STUN
 
-STUN（Session Traversal Utilities for NAT，NAT 的会话穿越功能 ），是一个允许位于 NAT 后的客户端找出自己的公网地址，判断出路由器阻止直连的限制方法的协议。<br />客户端通过给公网的 STUN 服务器发送请求获得自己的公网地址信息，以及是否能够被（穿过路由器）访问。<br />
+STUN（Session Traversal Utilities for NAT，NAT 的会话穿越功能 ），是一个允许位于 NAT 后的客户端找出自己的公网地址，判断出路由器阻止直连的限制方法的协议。<br />
+
+客户端通过给公网的 STUN 服务器发送请求获得自己的公网地址信息，以及是否能够被（穿过路由器）访问。<br />
 
 ![](https://cdn.nlark.com/yuque/0/2023/png/22023164/1688695158425-44b166a8-4e8c-4ce4-87a0-a9d98ae91a9b.png#averageHue=%2347704c&clientId=ud9d0288e-3ae9-4&from=paste&id=uc093c812&originHeight=378&originWidth=259&originalType=url&ratio=1&rotation=0&showTitle=false&status=done&style=shadow&taskId=u5bf5d21b-ea66-441f-a517-82ea07029c4&title=)
 
@@ -39,7 +43,9 @@ STUN（Session Traversal Utilities for NAT，NAT 的会话穿越功能 ），是
 
 ### TURN
 
-一些路由器使用一种“对称型 NAT”的 NAT 模型。这意味着路由器只接受和对端先前建立的连接（就是下一次请求建立新的连接映射）。<br />TURN（Traversal Using Relays around NAT，NAT 的中继穿越方式）通过 TURN 服务器中继所有数据的方式来绕过“对称型 NAT”。你需要在 TURN 服务器上创建一个连接，然后告诉所有对端设备发包到服务器上，TURN 服务器再把包转发给你。这种方式是开销很大的，所以只有在没得选择的情况下采用。<br />
+一些路由器使用一种“对称型 NAT”的 NAT 模型。这意味着路由器只接受和对端先前建立的连接（就是下一次请求建立新的连接映射）。<br />
+
+TURN（Traversal Using Relays around NAT，NAT 的中继穿越方式）通过 TURN 服务器中继所有数据的方式来绕过“对称型 NAT”。你需要在 TURN 服务器上创建一个连接，然后告诉所有对端设备发包到服务器上，TURN 服务器再把包转发给你。这种方式是开销很大的，所以只有在没得选择的情况下采用。<br />
 
 ![](https://cdn.nlark.com/yuque/0/2023/png/22023164/1688695373481-3c636260-e2fd-4fae-b66c-433555e2f834.png#averageHue=%2347704c&clientId=ud9d0288e-3ae9-4&from=paste&id=uc77c3169&originHeight=297&originWidth=295&originalType=url&ratio=1&rotation=0&showTitle=false&status=done&style=shadow&taskId=u634833ec-ff8a-4f36-9fd9-05e016f4167&title=)
 
@@ -76,141 +82,6 @@ a=extmap:1 urn:ietf:params:rtp-hdrext:toffset
 a=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
 a=extmap:3 urn:3gpp:video-orientation
 a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
-a=extmap:5 http://www.webrtc.org/experiments/rtp-hdrext/playout-delay
-a=extmap:6 http://www.webrtc.org/experiments/rtp-hdrext/video-content-type
-a=extmap:7 http://www.webrtc.org/experiments/rtp-hdrext/video-timing
-a=extmap:8 http://www.webrtc.org/experiments/rtp-hdrext/color-space
-a=extmap:9 urn:ietf:params:rtp-hdrext:sdes:mid
-a=extmap:10 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id
-a=extmap:11 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id
-a=sendrecv
-a=msid:ba71af70-9222-4a83-a780-946afd868aa9 6a9983e0-c05d-4271-b11d-1af15b9e68fe
-a=rtcp-mux
-a=rtcp-rsize
-a=rtpmap:96 VP8/90000
-a=rtcp-fb:96 goog-remb
-a=rtcp-fb:96 transport-cc
-a=rtcp-fb:96 ccm fir
-a=rtcp-fb:96 nack
-a=rtcp-fb:96 nack pli
-a=rtpmap:97 rtx/90000
-a=fmtp:97 apt=96
-a=rtpmap:102 H264/90000
-a=rtcp-fb:102 goog-remb
-a=rtcp-fb:102 transport-cc
-a=rtcp-fb:102 ccm fir
-a=rtcp-fb:102 nack
-a=rtcp-fb:102 nack pli
-a=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f
-a=rtpmap:103 rtx/90000
-a=fmtp:103 apt=102
-a=rtpmap:104 H264/90000
-a=rtcp-fb:104 goog-remb
-a=rtcp-fb:104 transport-cc
-a=rtcp-fb:104 ccm fir
-a=rtcp-fb:104 nack
-a=rtcp-fb:104 nack pli
-a=fmtp:104 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42001f
-a=rtpmap:105 rtx/90000
-a=fmtp:105 apt=104
-a=rtpmap:106 H264/90000
-a=rtcp-fb:106 goog-remb
-a=rtcp-fb:106 transport-cc
-a=rtcp-fb:106 ccm fir
-a=rtcp-fb:106 nack
-a=rtcp-fb:106 nack pli
-a=fmtp:106 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
-a=rtpmap:107 rtx/90000
-a=fmtp:107 apt=106
-a=rtpmap:108 H264/90000
-a=rtcp-fb:108 goog-remb
-a=rtcp-fb:108 transport-cc
-a=rtcp-fb:108 ccm fir
-a=rtcp-fb:108 nack
-a=rtcp-fb:108 nack pli
-a=fmtp:108 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f
-a=rtpmap:109 rtx/90000
-a=fmtp:109 apt=108
-a=rtpmap:127 H264/90000
-a=rtcp-fb:127 goog-remb
-a=rtcp-fb:127 transport-cc
-a=rtcp-fb:127 ccm fir
-a=rtcp-fb:127 nack
-a=rtcp-fb:127 nack pli
-a=fmtp:127 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d001f
-a=rtpmap:125 rtx/90000
-a=fmtp:125 apt=127
-a=rtpmap:39 H264/90000
-a=rtcp-fb:39 goog-remb
-a=rtcp-fb:39 transport-cc
-a=rtcp-fb:39 ccm fir
-a=rtcp-fb:39 nack
-a=rtcp-fb:39 nack pli
-a=fmtp:39 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=4d001f
-a=rtpmap:40 rtx/90000
-a=fmtp:40 apt=39
-a=rtpmap:98 VP9/90000
-a=rtcp-fb:98 goog-remb
-a=rtcp-fb:98 transport-cc
-a=rtcp-fb:98 ccm fir
-a=rtcp-fb:98 nack
-a=rtcp-fb:98 nack pli
-a=fmtp:98 profile-id=0
-a=rtpmap:99 rtx/90000
-a=fmtp:99 apt=98
-a=rtpmap:100 VP9/90000
-a=rtcp-fb:100 goog-remb
-a=rtcp-fb:100 transport-cc
-a=rtcp-fb:100 ccm fir
-a=rtcp-fb:100 nack
-a=rtcp-fb:100 nack pli
-a=fmtp:100 profile-id=2
-a=rtpmap:101 rtx/90000
-a=fmtp:101 apt=100
-a=rtpmap:112 H264/90000
-a=rtcp-fb:112 goog-remb
-a=rtcp-fb:112 transport-cc
-a=rtcp-fb:112 ccm fir
-a=rtcp-fb:112 nack
-a=rtcp-fb:112 nack pli
-a=fmtp:112 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=64001f
-a=rtpmap:113 rtx/90000
-a=fmtp:113 apt=112
-a=rtpmap:116 red/90000
-a=rtpmap:117 rtx/90000
-a=fmtp:117 apt=116
-a=rtpmap:118 ulpfec/90000
-a=ssrc-group:FID 1094471611 748217863
-a=ssrc:1094471611 cname:VOfr9YfMexwH++8a
-a=ssrc:1094471611 msid:ba71af70-9222-4a83-a780-946afd868aa9 6a9983e0-c05d-4271-b11d-1af15b9e68fe
-a=ssrc:748217863 cname:VOfr9YfMexwH++8a
-a=ssrc:748217863 msid:ba71af70-9222-4a83-a780-946afd868aa9 6a9983e0-c05d-4271-b11d-1af15b9e68fe
-m=audio 9 UDP/TLS/RTP/SAVPF 111 63 9 0 8 13 110 126
-c=IN IP4 0.0.0.0
-a=rtcp:9 IN IP4 0.0.0.0
-a=ice-ufrag:M1il
-a=ice-pwd:nh3sQuqokikxlyvF4J42CcXk
-a=ice-options:trickle
-a=fingerprint:sha-256 E2:66:65:48:16:0A:38:29:A1:5C:CB:5D:7C:FF:89:93:2A:A2:68:6E:44:6B:52:94:01:35:E8:A4:CD:53:51:B9
-a=setup:actpass
-a=mid:1
-a=extmap:14 urn:ietf:params:rtp-hdrext:ssrc-audio-level
-a=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
-a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
-a=extmap:9 urn:ietf:params:rtp-hdrext:sdes:mid
-a=recvonly
-a=rtcp-mux
-a=rtpmap:111 opus/48000/2
-a=rtcp-fb:111 transport-cc
-a=fmtp:111 minptime=10;useinbandfec=1
-a=rtpmap:63 red/48000/2
-a=fmtp:63 111/111
-a=rtpmap:9 G722/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:8 PCMA/8000
-a=rtpmap:13 CN/8000
-a=rtpmap:110 telephone-event/48000
-a=rtpmap:126 telephone-event/8000
 ```
 
 
@@ -599,13 +470,25 @@ SRS（Simple Realtime Server）是一个简单高效的实时视频服务器，�
 
 ### 架构
 
-![SRS Overview](./images\0aa7c0eb-b4f4-420d-9205-ef5a34f9856b.png)
+![SRS Overview](./assets/0aa7c0eb-b4f4-420d-9205-ef5a34f9856b.png)
 
 加入 SRS 服务之后整个架构流程如上图所示，目前暂时先不考虑存储，我们只需要关注架构中的上面那一层。媒体流从 Live Streaming Clients => SRS Server => WebRTC Clients。
 
 
 
-### 上手
+### SFU
+
+> srs 也可以当作 sfu 来使用
+
+* P2P
+
+* PtoMany
+
+
+
+### RTMP 推流
+
+#### RTMP 推流步骤
 
 1、首先从 github 上拉取项目，我们需要其中的配置文件
 
@@ -634,6 +517,12 @@ ffmpeg -re -stream_loop -1 -i input.flv -c copy -f flv rtmp://localhost/live/liv
 ffplay rtmp://localhost/live/livestream
 ```
 
+5.1、如果输入流为 RTMP 链接，也可以使用 ffmpeg 来实现推流
+
+```bash
+ffmpeg -re -stream_loop -1 -i rtmp://somewhere/live/livestream -c copy -f flv rtmp://localhost/live/repush
+```
+
 6、打开 `http://localhost:8080/`，进入 srs 控制台，连接 srs
 
 ![d5f064f3-7d57-49a0-a1df-0cdd95ea0d31](assets/d5f064f3-7d57-49a0-a1df-0cdd95ea0d31.png)
@@ -646,28 +535,50 @@ ffplay rtmp://localhost/live/livestream
 
 ![55782c59-544e-4e98-bee5-cf49dfa26ca4](assets/55782c59-544e-4e98-bee5-cf49dfa26ca4.png)
 
-9、如果配置文件中开启了 rtmp2rtc 支持，还可以选择以 webrtc 的形式预览（如果使用域名无法播放，尝试使用 IP 来播放）
+9、如果配置文件中开启了 rtmp2rtc 支持，还可以选择以 WebRTC 的形式预览（如果使用域名无法播放，尝试使用 IP 来播放）
 
 ![1a2c91a6-4cec-4669-b7da-29468bbddcec](assets/1a2c91a6-4cec-4669-b7da-29468bbddcec.png)
 
 
 
-### SFU
+#### 踩坑
 
-> srs 也可以当作 sfu 来使用
+1、rtmp to webrtc
 
-* P2P
+在使用 docker 运行的时候，命令如下
 
-* PtoMany
+```bash
+docker run --rm --name=srs -it -p 1935:1935 -p 1985:1985 -p 8080:8080 -p 1990:1990 -p 8088:8088 -d -p 8000:8000/udp --env CANDIDATE=192.168.2.201 ossrs/srs:latest ./objs/srs -c conf/docker.conf
+```
+
+注意看：
+
+* 使用 RTC 播放，在点击播放视频之后需要等几秒钟才有画面显示。
+
+* 命令行中指定的 `CANDIDATE` 需要是本机的 IP 或者服务器的公网 IP；如果使用域名无法进行播放，尝试将连接修改成 `CANDIDATE` 中指定的 IP。
+
+* 还要注意指定的配置文件中是否开启了 `rtmp_to_rtc` 或者 `rtc_to_rtmp` 支持（需要 `4.x` 版本以上才支持）。
+  
+  ```
+  rtc {
+      enabled on;
+      # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtmp-to-rtc
+      rtmp_to_rtc on;
+      # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtc-to-rtmp
+      rtc_to_rtmp on;
+  }
+  ```
+  
+* 调试的时候又发现了一个坑：基于 chromium 的 edge 使用 rtc 播放器可能无法播放，需要使用 chrome
+
+* 也可能是 SRS 播放器链接协议的问题，在没有启动 httpx-static 服务的情况下，注意播放器的连接需要是 http 协议：http://localhost/players/rtc_player.html
+
+<br />
+
 
 
 
 ### WebRTC 推流
-
-#### 踩坑
-
-* 原先在 docker 中运行 ossrs 然后使用 WebRTC 推流，查看控制台的时候发现该链接显示无流，但推流步骤都是正确的，百思不得其解。随后从 docker 运行改成自编译 ossrs 运行，配置文件中开启 rtc 相关配置，控制台显示推流成功。
-* SRS 播放器默认打开 http://localhost/room/streamId.flv 可能会有点卡顿，可以使用 RTC 播放器。但 RTC 播放器可能会出现黑屏，可以切换到 Chrome 浏览器。RTC 播放器的原始播放链接类似：webrtc://localhost/room/streamId.flv，可以尝试修改成 webrtc://<Your-IP>/room/stream。
 
 
 
@@ -781,45 +692,24 @@ const setStream = (dom, stream) => {
 
 
 
+#### 踩坑
+
+* 原先在 docker 中运行 ossrs 然后使用 WebRTC 推流，查看控制台的时候发现该链接显示无流，但推流步骤都是正确的，百思不得其解。随后从 docker 运行改成自编译 ossrs 运行，配置文件中开启 rtc 相关配置，控制台显示推流成功。
+* SRS 播放器默认打开 http://localhost/room/streamId.flv 可能会有点卡顿，可以使用 RTC 播放器。但 RTC 播放器可能会出现黑屏，可以切换到 Chrome 浏览器。RTC 播放器的原始播放链接类似：webrtc://localhost/room/streamId.flv，可以尝试修改成 webrtc://<Your-IP>/room/stream。
+
+
+
+### RTMP 低延迟配置
+
+> 参考：http://ossrs.net/lts/zh-cn/docs/v4/doc/sample-realtime
+
+
+
 ### Forward 转发
 
 > 可以参考文档：[Forward 部署](https://ossrs.net/lts/zh-cn/docs/v4/doc/sample-forward) 进行配置
 
 
-
-### 踩坑
-
-1、rtmp to webrtc
-
-在使用 docker 运行的时候，命令如下
-
-```bash
-docker run --rm --name=srs -it -p 1935:1935 -p 1985:1985 -p 8080:8080 -p 1990:1990 -p 8088:8088 -d -p 8000:8000/udp --env CANDIDATE=192.168.2.201 ossrs/srs:latest ./objs/srs -c conf/docker.conf
-```
-
-注意看：
-
-* 使用 RTC 播放，在点击播放视频之后需要等几秒钟才有画面显示。
-
-* 命令行中指定的 `CANDIDATE` 需要是本机的 IP 或者服务器的公网 IP；如果使用域名无法进行播放，尝试将连接修改成 `CANDIDATE` 中指定的 IP。
-
-* 还要注意指定的配置文件中是否开启了 `rtmp_to_rtc` 或者 `rtc_to_rtmp` 支持（需要 `4.x` 版本以上才支持）。
-  
-  ```
-  rtc {
-      enabled on;
-      # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtmp-to-rtc
-      rtmp_to_rtc on;
-      # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtc-to-rtmp
-      rtc_to_rtmp on;
-  }
-  ```
-  
-* 调试的时候又发现了一个坑：基于 chromium 的 edge 使用 rtc 播放器可能无法播放，需要使用 chrome
-
-* 也可能是 SRS 播放器链接协议的问题，在没有启动 httpx-static 服务的情况下，注意播放器的连接需要是 http 协议：http://localhost/players/rtc_player.html
-
-<br />
 
 ### 关于 http 和 webrtc 的流畅度
 
@@ -868,6 +758,34 @@ Janus 的弊端：
 
 
 
+## 使用 Java 将视频流推送到 SRS
+
+1、确保本地安装了 ffmpeg 环境，或者将 ffmpeg 放入 Java 程序的 resource 目录。
+
+2、使用 StringBuilder 来拼接 ffmpeg 命令。
+
+3、使用 `Runtime.getRuntime().exec()` 来运行 ffmpeg 命令
+
+```java
+// 1、在实际的生产环境中还需考虑是否需要开启多线程的情况
+// 2、目前在测试中发现只进行推流操作应用占用的内存有 40 mb 左右
+Process process;
+StringBuilder command = new StringBuilder("ffmpeg ");
+command.append("-re ");
+command.append("-stream_loop -1 ");
+command.append("-i input.flv ");
+command.append("-c copy ");
+command.append("-f flv ");
+command.append("rtmp://localhost/live/livestream");
+process = Runtime.getRuntime().exec(command.toString());
+BufferedReader buffer = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+String line = null;
+while ( null != (line = buffer.readLine())) {
+    System.out.println(line);
+}
+// if (null != process) process.destroy(); // 推流结束后
+```
+
 ## 参考
 
 * https://developer.mozilla.org/zh-CN/docs/Web/API/WebRTC_API/Protocols
@@ -877,3 +795,7 @@ Janus 的弊端：
 * https://juejin.cn/post/7189829515265179705
 
 * https://ossrs.net/lts/zh-cn/
+
+* https://blog.csdn.net/u010957645/article/details/124470629
+
+* https://www.jianshu.com/p/bae3340d5ed0
