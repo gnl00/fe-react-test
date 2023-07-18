@@ -32,9 +32,7 @@ function SrsRtcPublisherAsync() {
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
     self.constraints = {
         audio: false, // turn off audio for now
-        video: {
-            width: {ideal: 320, max: 576}
-        }
+        video: true
     };
 
     // @see https://github.com/rtcdn/rtcdn-draft
@@ -61,6 +59,7 @@ function SrsRtcPublisherAsync() {
     //      webrtc://r.ossrs.net/live/livestream?token=xxx
     self.publish = async function (url) {
         var conf = self.__internal.prepareUrl(url);
+        console.log('conf', conf)
         self.pc.addTransceiver("audio", {direction: "sendonly"});
         self.pc.addTransceiver("video", {direction: "sendonly"});
 

@@ -22,8 +22,6 @@ function One2One() {
 	const [target, setTarget] = useState('')
 	const [client, setClient] = useState('')
 
-
-
 	const connectSignaling = async (wsSchema, host, port, roomId, clientId) => {
 		console.log('connectSignaling')
 		sig = new SrsRtcSignalingAsync()
@@ -42,8 +40,27 @@ function One2One() {
 		sig.onmessage = data => {
 			console.log('::: Signaling Server Message Received :::')
 			console.log(data)
+			if (data) onSignalingMessage(data)
 		}
 	}
+
+	const onSignalingMessage = msg => {
+		let event = null
+		if (event = msg['event']) {
+			switch (event) {
+				case 'publish':
+					const publisher = msg['peer']
+					startPlay(room, publisher.display)
+					break;
+				case 'leave':
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
+	const startPlay = (room, publisherDisplay) => {}
 
 	const join = async () => {
 		let resp = await sig.send({action: 'join', room: room, display: client});
@@ -51,30 +68,32 @@ function One2One() {
 
 		/*
 		返回的消息格式如下
-		 {
-    "action": "join",
-    "room": "1234",
-    "self": {
-        "display": "0vXBkT",
-        "publishing": false
-    },
-    "participants": [
-        {
-            "display": "0vXBkT",
-            "publishing": false
-        }
-    ]
-   }
-    */
+		{
+				"action": "join",
+				"room": "1234",
+				"self": {
+						"display": "0vXBkT",
+						"publishing": false
+				},
+				"participants": [{
+					"display": "0vXBkT",
+						"publishing": false
+				}]
+		}
+		*/
 	}
 
 	const publish = async () => {
 		await startPublish('localhost', room, client)
+		sig.send({
+			action: 'publish',
+			room: room,
+			display: client
+		})
 	}
 
 	const startPublish = (host, room, display) => {
 		const url = 'webrtc://' + host + '/' + room + '/' + display
-
 		if (publisher) {
 			publisher.close()
 		}
@@ -121,7 +140,7 @@ function One2One() {
 	}
 
 	const publishClick = () => {
-		startPublish(srs, room, client)
+		publish()
 	}
 
 	return(
@@ -137,8 +156,8 @@ function One2One() {
 				<button onClick={joinClick}>Join Room</button>
 				<button onClick={publishClick}>Publish</button>
 			</div>
-			<div>
-				<video id={"publishVideo"} autoPlay muted style={{width: "720px", height: "auto"}} />
+			<div id={"videoArea"}>
+				<video id={"publishVideo"} autoPlay muted style={{width: "480px", height: "auto"}} />
 			</div>
 		</>
 	)

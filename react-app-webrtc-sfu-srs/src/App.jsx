@@ -6,6 +6,10 @@ import './assets/js/jquery-1.10.2.min.js'
 
 const router = createBrowserRouter([
   {
+    path: '/',
+    element: <One2One />
+  },
+  {
     path: '/one2one',
     element: <One2One />
   },

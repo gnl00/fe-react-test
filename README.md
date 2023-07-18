@@ -347,9 +347,11 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 
 
 
+### SFU
 
+> use janus as a sfu
 
-### P2P
+#### P2P
 
 
 
@@ -527,17 +529,61 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 
 
 
-### PtoMany
+#### PtoMany
 
 > 调了很久，PtoMany 终于通了。遇到一个坑：在 WSL 中的 Ubuntu 安装 Docker 再启动 Janus 的话在使用 `videoroom` 的时候会导致无法启动 ICE Server 无法启动；测试 `videocall` 的时候却是没问题的。
 
 
 
-流程和 P2P 有差别：
+**流程和 P2P 有差别**：
 
 1、无需发送 register 请求，直接 join room 就会生成唯一 id；后续可以使用这个唯一的 id 进行视频流的发布和订阅操作。
 
 2、createOffer 和 createAnswer 操作是分开的，由两个不同的 pluginHandle 分别执行。publisher 的 pluginHandle 负责 createOffer；subscriber 的 pluginHandle 负责 createAnswer。publisher 和 subscriber 都是和 Janus 服务器进行交流的，不像 P2P 直接进行交流。
+
+
+
+**关于发布与订阅逻辑**
+
+当前的代码逻辑将发布和订阅耦合在了一起，是为了达到既能发布也能订阅这一操作。如果想要将这两个角色解耦，可以修改一下订阅的逻辑：输入 roomId 之后先 listParticipants，选择对应的 publisher 之后再带着 publisherId 进行 join 操作。
+
+
+
+### rtc_forward
+
+Janus 还提供 *RTP forwarding* 操作。forward 的使用场景：比如说存在多个 rtsp/rtmp 的服务器，可以将当前流媒体服务器中的任何一路流转发到其他服务器，其他服务器收到该流后再进行分发，可以实现集群的容灾。
+
+```js
+const doForward = () => {
+    const streams = []
+    publishStreams.forEach(stream => {
+        if (stream.type === 'video') {
+            const readyToPush = {
+                port: 4567,
+                rtcp_port: 4568,
+                mid: stream.mid
+            }
+            streams.push(readyToPush)
+        }
+    })
+    const message = {
+        request: 'rtp_forward',
+        room: roomId,
+        publisher_id: clientId,
+        secret: 'adminpwd',
+        host: '127.0.0.1',
+        host_family: 'ipv4',
+        streams
+    }
+
+    videoRoomPluginHandle.send({
+        message,
+        success: resp => {
+            console.log(resp)
+        }
+    })
+}
+```
 
 
 
@@ -550,7 +596,6 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 SRS（Simple Realtime Server）是一个简单高效的实时视频服务器，支持 RTMP、WebRTC、HLS、HTTP-FLV、SRT 等多种实时流媒体协议。
 
 > srs 提供 源码编译、docker、k8s 支持。
-
 
 ### 架构
 
@@ -576,7 +621,7 @@ SRS（Simple Realtime Server）是一个简单高效的实时视频服务器，�
 docker run --name=srs -d --rm -it -p 1935:1935 -p 1985:1985 -p 8080:8080 ossrs/srs:latest ./objs/srs -c conf/docker.conf
 ```
 
-4、安装 ffmpeg，[ffmpeg 下载](https://ffmpeg.org/download.html)
+4、安装 ffmpeg，[ffmpeg 下载](https://ffmpeg.org/download.html)。注意：官方版本的 ffmpeg 不支持 hevc 格式的视频，需要手动添加依赖并重新编译，参考：https://github.com/runner365/ffmpeg_rtmp_h265
 
 5、使用 ffmpeg 命令，将本地媒体文件推流至 srs 服务器
 
@@ -591,21 +636,154 @@ ffplay rtmp://localhost/live/livestream
 
 6、打开 `http://localhost:8080/`，进入 srs 控制台，连接 srs
 
-![d5f064f3-7d57-49a0-a1df-0cdd95ea0d31](./images/d5f064f3-7d57-49a0-a1df-0cdd95ea0d31.png)
+![d5f064f3-7d57-49a0-a1df-0cdd95ea0d31](assets/d5f064f3-7d57-49a0-a1df-0cdd95ea0d31.png)
 
 7、点击视频流，并预览
 
-![4ed7f303-4974-4c5a-bf5b-1285df1668c4](./images/4ed7f303-4974-4c5a-bf5b-1285df1668c4.png)
+![4ed7f303-4974-4c5a-bf5b-1285df1668c4](assets/4ed7f303-4974-4c5a-bf5b-1285df1668c4.png)
 
 8、播放视频
 
-![55782c59-544e-4e98-bee5-cf49dfa26ca4](./images/55782c59-544e-4e98-bee5-cf49dfa26ca4.png)
+![55782c59-544e-4e98-bee5-cf49dfa26ca4](assets/55782c59-544e-4e98-bee5-cf49dfa26ca4.png)
 
 9、如果配置文件中开启了 rtmp2rtc 支持，还可以选择以 webrtc 的形式预览（如果使用域名无法播放，尝试使用 IP 来播放）
 
-![1a2c91a6-4cec-4669-b7da-29468bbddcec](./images/1a2c91a6-4cec-4669-b7da-29468bbddcec.png)
+![1a2c91a6-4cec-4669-b7da-29468bbddcec](assets/1a2c91a6-4cec-4669-b7da-29468bbddcec.png)
 
 
+
+### SFU
+
+> srs 也可以当作 sfu 来使用
+
+* P2P
+
+* PtoMany
+
+
+
+### WebRTC 推流
+
+#### 踩坑
+
+* 原先在 docker 中运行 ossrs 然后使用 WebRTC 推流，查看控制台的时候发现该链接显示无流，但推流步骤都是正确的，百思不得其解。随后从 docker 运行改成自编译 ossrs 运行，配置文件中开启 rtc 相关配置，控制台显示推流成功。
+* SRS 播放器默认打开 http://localhost/room/streamId.flv 可能会有点卡顿，可以使用 RTC 播放器。但 RTC 播放器可能会出现黑屏，可以切换到 Chrome 浏览器。RTC 播放器的原始播放链接类似：webrtc://localhost/room/streamId.flv，可以尝试修改成 webrtc://<Your-IP>/room/stream。
+
+
+
+#### RTC 推流步骤
+
+0、引入依赖 `srs.sdk.js` 和 `srs.sig.js`
+
+```js
+// srs.sdk.js
+export {
+    SrsRtcPublisherAsync,
+    SrsRtcPlayerAsync
+}
+
+// srs.sig.js
+export {
+    SrsRtcSignalingAsync,
+    SrsRtcSignalingParse
+}
+```
+
+1、链接到信令服务器，并初始化
+
+```js
+const connectSignaling = async (wsSchema, host, port, roomId, clientId) => {
+    console.log('connectSignaling')
+    sig = new SrsRtcSignalingAsync()
+    initSig(sig)
+
+    // wsSchema = ws|wss
+    // host = <signaling-server-ip>
+    // const wsUrl = wsSchema + '://' + host + ':' + port + '/sig/v1/rtc?room=' + roomId  + '&display='+ clientId
+    const srsUrl = host + ':' + port
+    setSrs(srsUrl)
+    await sig.connect(wsSchema, srsUrl, roomId, clientId)
+}
+
+const initSig = (sig) => {
+    console.log('init Signaling')
+    sig.onmessage = data => {
+        if (data) onSignalingMessage(data)
+    }
+}
+```
+
+2、加入房间
+
+```js
+const join = async () => {
+    let resp = await sig.send({action: 'join', room: room, display: client});
+    console.log('signaling join ok ', resp)
+
+/*
+返回的消息格式如下
+{
+    "action": "join",
+    "room": "1234",
+    "self": {
+        "display": "0vXBkT",
+        "publishing": false
+    },
+    "participants": [{
+    	"display": "0vXBkT",
+        "publishing": false
+    }]
+}
+*/
+}
+```
+
+3、发布（推流）到 srs 服务器
+
+```js
+const publish = async () => {
+    await startPublish('localhost', room, client)
+    sig.send({
+        action: 'publish',
+        room: room,
+        display: client
+    })
+}
+
+const startPublish = (host, room, display) => {
+    const url = 'webrtc://' + host + '/' + room + '/' + display
+    if (publisher) {
+        publisher.close()
+    }
+
+    publisher = SrsRtcPublisherAsync()
+    console.log('publisher ', publisher)
+    const publisherVideoDom = document.getElementById('publishVideo')
+    setStream(publisherVideoDom, publisher.stream)
+
+    return publisher.publish(url).then(resp => {
+        console.log('publish success ', resp)
+        console.log('self url ', url)
+        setSelfUrl(url)
+    })
+}
+
+const setStream = (dom, stream) => {
+    if (stream) dom.srcObject = stream
+}
+```
+
+4、查看控制台显示有流，即表示推流成功
+
+![image-20230718105932212](./assets/image-20230718105932212.png)
+
+5、接下来可以使用 webrtc://localhost/room/clientId 拉流播放
+
+
+
+### Forward 转发
+
+> 可以参考文档：[Forward 部署](https://ossrs.net/lts/zh-cn/docs/v4/doc/sample-forward) 进行配置
 
 
 
@@ -636,10 +814,12 @@ docker run --rm --name=srs -it -p 1935:1935 -p 1985:1985 -p 8080:8080 -p 1990:19
       rtc_to_rtmp on;
   }
   ```
+  
+* 调试的时候又发现了一个坑：基于 chromium 的 edge 使用 rtc 播放器可能无法播放，需要使用 chrome
+
+* 也可能是 SRS 播放器链接协议的问题，在没有启动 httpx-static 服务的情况下，注意播放器的连接需要是 http 协议：http://localhost/players/rtc_player.html
 
 <br />
-
-
 
 ### 关于 http 和 webrtc 的流畅度
 
@@ -662,6 +842,29 @@ RTMP 推流到 SRS 使用 WebRTC 播放是常见的用法，RTMP 是 30 帧，We
 > 2、流畅度：播放过程不卡，直播 > 低延迟直播 > RTC；
 > 
 > 3、低延迟：能通话，RTC > 低延迟直播 > 直播
+
+
+
+## Janus 与 SRS 对比
+
+> 引用：https://github.com/ossrs/srs/issues/2296
+
+Janus 的优势：
+
+- 支持 Video Call，能在其基础上快速实现一对一通话。专门的信令，提供信令说明文档。
+- 支持 Video Room，能在其基础上快速开放音视频会议。
+- 支持 Audio Room(audiobridge)，服务器对各个客户端的音频进行混音后再转发，能降低客户端流量，提升弱网体验。在需要纯语音的场景用的比较多，比如有同事将其应用在游戏喊麦、三方语音客服等领域
+- 支持录制和回放
+- Android、IOS、Web、Window 客户端参考 DEMO。
+- 支持插件开发( Video Room、Audio Room 等)
+
+总结：Janus 能够提供常见场景的解决方案，且各个客户端有可以参考的代码，能够快速实现 demo 的搭建。
+
+Janus 的弊端：
+
+- 原生不支持级联，单机接入量也有限。
+- 使用 glib 库，导致学习源码成本较高。
+- 不支持 Web 直播推流接入。
 
 
 

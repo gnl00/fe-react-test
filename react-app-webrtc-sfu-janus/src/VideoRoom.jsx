@@ -22,9 +22,11 @@ let globalRoomId = -1
 let globalPublisherIds = []
 let subscribe_mode = false;
 
+let publishStreams = []
+
 function VideoRoom() {
 	const [clientId, setClientId] = useState(-1);
-	const [roomId, setRoomId] = useState(-1);
+	const [roomId, setRoomId] = useState(1234);
 	const [subscribeMode, setSubscribeMode] = useState(false);
 	const [publisherIds, setPublisherIds] = useState([])
 
@@ -137,6 +139,11 @@ function VideoRoom() {
 
 					break;
 				case 'event':
+					let streams = []
+					if (msg['configured'] === 'ok' && (streams = msg["streams"])) {
+						publishStreams = streams
+					}
+
 					// received publish event
 					// save publisher info
 					publishers = msg["publishers"]
@@ -444,6 +451,55 @@ function VideoRoom() {
 		newRemoteFeed(val)
 	}
 
+	const forwardClick = () => {
+		doForward()
+	}
+
+	const doForward = () => {
+		const streams = []
+		publishStreams.forEach(stream => {
+			if (stream.type === 'video') {
+				const readyToPush = {
+					port: 4567,
+					rtcp_port: 4568,
+					mid: stream.mid
+				}
+				streams.push(readyToPush)
+			}
+		})
+		const message = {
+			request: 'rtp_forward',
+			room: roomId,
+			publisher_id: clientId,
+			secret: 'adminpwd',
+			host: '127.0.0.1',
+			host_family: 'ipv4',
+			streams
+		}
+
+		videoRoomPluginHandle.send({
+			message,
+			success: resp => {
+				console.log(resp)
+			}
+		})
+	}
+
+	const listForwarderClick = () => {
+
+		const message = {
+			request: 'listforwarders',
+			room: roomId,
+			secret: 'adminpwd'
+		}
+		videoRoomPluginHandle.send({
+			message,
+			success: resp => {
+				console.log(resp)
+			}
+		})
+	}
+
 	return (
 		<>
 			<div style={{width: "720px"}}>
@@ -461,7 +517,7 @@ function VideoRoom() {
 				<br />
 
 				<p>
-					join roomId: <input type={"text"} onChange={onRoomChange}/>
+					join roomId: <input type={"text"} value={roomId} onChange={onRoomChange}/>
 					<br></br>
 					<button onClick={joinRoomClick}>join</button>
 					<button onClick={listParticipantsClick}>list Participants</button>
@@ -471,6 +527,8 @@ function VideoRoom() {
 					!subscribeMode ?
 						<>
 							<button onClick={publishClick}>publish</button>
+							<button onClick={forwardClick}>forward</button>
+							<button onClick={listForwarderClick}>list forwarder</button>
 						</>:<></>
 				}
 
