@@ -53,13 +53,11 @@ TURN（Traversal Using Relays around NAT，NAT 的中继穿越方式）通过 TU
 
 ### SDP
 
-SDP（Session Description Protocol，会话描述协议），是一个描述多媒体连接内容的协议，例如分辨率，格式，编码，加密算法等。所以在数据传输时两端都能够理解彼此的数据。本质上，这些描述内容的元数据并不是媒体流本身。从技术上讲，SDP 并不是一个真正的协议，而是一种数据格式，用于描述在设备之间共享媒体的连接。
+SDP（Session Description Protocol，会话描述协议），是一个描述多媒体连接内容的协议，例如分辨率，格式，编码，加密算法等。本质上，这些描述内容的元数据并不是媒体流本身。从技术上讲，SDP 并不是一个真正的协议，而是一种数据格式，用于描述在设备之间共享媒体的连接。
 
 
 
 SDP 由一行或多行 UTF-8 文本组成，每行以一个字符的类型开头，后跟等号（“ =”），然后是包含值或描述的结构化文本，其格式取决于类型。以给定字母开头的文本行通常称为“字母行”。例如，提供媒体描述的行的类型为“m”，因此这些行称为“m 行”。
-
-
 
 ```
 v=0
@@ -133,9 +131,10 @@ a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extension
 * [为什么需要 SFU 服务器](https://zhuanlan.zhihu.com/p/449126409)
 * [如何实现 SFU 服务器](https://zhuanlan.zhihu.com/p/68500274)
   
-  
 
-SFU 服务器：
+
+
+## 流媒体/WebRTC 服务器
 
 * janus-gateway
 
@@ -149,7 +148,8 @@ SFU 服务器：
 
 * ossrs
   
-  
+
+> 流媒体服务器例如 Janus 和 SRS 同时还能兼顾 SFU 服务器的职责。
 
 ## Janus-gateway
 
@@ -189,11 +189,12 @@ docker compose logs -f # 用来查看 docker compose 日志比 docker logs -f <c
       }
   ```
   
-  
-  
-  
 
-理了一段时间，终于通了。整理以下思路：
+
+
+
+
+> 理了一段时间，终于通了，整理一下思路。
 
 
 
@@ -207,10 +208,10 @@ docker compose logs -f # 用来查看 docker compose 日志比 docker logs -f <c
 
 ```
 ## 新版本中下面这几个路径在配置文件中是 @xxx@ 变量赋值，改成下面的
-configs_folder = "/usr/local/etc/janus"                        
-plugins_folder = "/usr/local/lib/janus/plugins"                   
+configs_folder = "/usr/local/etc/janus"
+plugins_folder = "/usr/local/lib/janus/plugins"
 transports_folder = "/usr/local/lib/janus/transports"     
-events_folder = "/usr/local/lib/janus/events"                    
+events_folder = "/usr/local/lib/janus/events"
 loggers_folder = "/usr/local/lib/janus/loggers"
 ```
 
@@ -417,6 +418,12 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 **关于发布与订阅逻辑**
 
 当前的代码逻辑将发布和订阅耦合在了一起，是为了达到既能发布也能订阅这一操作。如果想要将这两个角色解耦，可以修改一下订阅的逻辑：输入 roomId 之后先 listParticipants，选择对应的 publisher 之后再带着 publisherId 进行 join 操作。
+
+
+
+#### Stream
+
+> 推流到 Janus 服务器
 
 
 
