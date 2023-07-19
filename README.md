@@ -421,9 +421,87 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 
 
 
-#### Stream
+#### Streaming
 
 > 推流到 Janus 服务器
+
+1、修改配置文件
+
+```
+# rtp-test 可以看成是推流的配置
+# rtp-test 是流的名称、推流协议 rtp
+rtp-test: {
+	type = "rtp"
+	# id 不能与配置文件中的其他流配置重复
+	id = 1
+	description = "Opus/VP8 live stream coming from external source"
+	metadata = "You can use this metadata section to put any info you want!"
+	audio = false
+	video = true
+	# 绑定的端口不能和配置内的其他流重复
+	videoport = 5004
+	videopt = 100
+	videocodec = "vp8"
+}
+
+# type = "live" 表示这是一个实时流
+file-live-sample: {
+	type = "live"
+	id = 2
+	description = "a-law file source (radio broadcast)"
+	# 将来的 @stream@ 修改成 /usr/local/share/janus/streams
+	filename = "/usr/local/share/janus/streams/radio.alaw"
+	audio = true
+	video = false
+	# 只有提供了正确的密码才能访问这个流
+	secret = "adminpwd"
+}
+file-ondemand-sample: {
+	type = "ondemand"
+	id = 3
+	description = "mu-law file source (music)"
+	# 将来的 @stream@ 修改成 /usr/local/share/janus/streams
+	filename = "/usr/local/share/janus/streams/music.mulaw"
+	audio = true
+	video = false
+	secret = "adminpwd"
+}
+```
+
+2、ffmpeg 推流
+
+```bash
+-an 表示不处理音频
+ffmpeg -re -stream_loop -1 -an -i input.flv -c copy -f rtp rtp://127.0.0.1:5004
+```
+
+>**上当了**
+>
+>ffmpeg 推流无异常，但是无法播放。尝试编译 janus 代替 docker 版 janus。
+
+> **编译 Janus**
+>
+> janus no package 'nice' found
+>
+> ```bash
+> sudo aptitude install libmicrohttpd-dev libjansson-dev libnice-dev
+> ```
+>
+> libsrtp not found
+>
+> https://github.com/ivadim/fruitnanny/issues/2
+>
+> https://github.com/cisco/libsrtp
+
+> **结果**
+>
+> Not work
+
+
+
+> https://blog.csdn.net/A18373279153/article/details/109732954
+>
+> https://blog.csdn.net/cgs1999/article/details/95085038
 
 
 
