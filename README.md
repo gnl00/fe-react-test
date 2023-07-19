@@ -285,13 +285,12 @@ const initPluginHandle = () => {
 
 ```js
 const registerToJanus = () => {
-    const register = {
-        request: 'register', // 还有 call/accept 等请求，janus 会根据请求处理不同的操作
-        username: clientId
-    }
-
-    videoCallPluginHandle.send({message: regiientId)
-                               }
+	const message = {
+		request: 'register', // 还有 call/accept 等请求，janus 会根据请求处理不同的操作
+		username: clientId
+	}
+	videoCallPluginHandle.send({message})
+}
 ```
 
 5、发起呼叫请求（创建 Offer）
