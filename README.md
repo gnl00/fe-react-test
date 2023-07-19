@@ -179,14 +179,13 @@ docker compose logs -f # 用来查看 docker compose 日志比 docker logs -f <c
 * `videoCallPluginHandle#data`
   
   ```js
-      const sendToDataChannel = param => {
-          console.log(param)
-          // 使用 dataChannel 发送消息的时候注意 videoCallPluginHandle.data 方法参数需要以对象的形式传入，并且参数名只能叫 text 或者 data
-          // data(parameters): sends data through the Data Channel, if available;
-          videoCallPluginHandle.data({
-              data: param
-          })
-      }
+  const sendToDataChannel = param => {
+      // 使用 dataChannel 发送消息的时候注意 videoCallPluginHandle.data 方法参数需要以对象的形式传入，并且参数名只能叫 text 或者 data
+      // data(parameters): sends data through the Data Channel, if available;
+      videoCallPluginHandle.data({
+          data: param
+      })
+  }
   ```
   
 
@@ -232,171 +231,171 @@ loggers_folder = "/usr/local/lib/janus/loggers"
 2、初始化 Janus
 
 ```js
-    let janusInst = null  
-  let videoCallPluginHandle = null;
-    function initJanus () {
-        janus.init({
-            debug: true,
-            dependencies: Janus.useDefaultDependencies({ adapter: adapter }), // must be here
-        })
+let janusInst = null  
+let videoCallPluginHandle = null;
+function initJanus () {
+    janus.init({
+        debug: true,
+        dependencies: Janus.useDefaultDependencies({ adapter: adapter }), // must be here
+    })
 
-        janusInst = new Janus({
-            server: 'http://localhost:8088/janus', // your janus server
-            success: () => {
-                initPluginHandle(); // 初始化 janus 成功后初始化插件
-            },
-            error: err => {},
-            destroy: () => {}
-        })
-    }
+    janusInst = new Janus({
+        server: 'http://localhost:8088/janus', // your janus server
+        success: () => {
+            initPluginHandle(); // 初始化 janus 成功后初始化插件
+        },
+        error: err => {},
+        destroy: () => {}
+    })
+}
 ```
 
 3、初始化插件
 
 ```js
-    const [clientId, setClientId] = useState('');
-    const initPluginHandle = () => {
-        // client unique Id
-        const randomId = Janus.randomString(8);
-        setClientId(randomId)
+const [clientId, setClientId] = useState('');
+const initPluginHandle = () => {
+    // client unique Id
+    const randomId = Janus.randomString(8);
+    setClientId(randomId)
 
-        janusInst.attach({
-            opaqueId: clientId,
-            plugin: 'janus.plugin.videocall', // 设置需要的插件
-            success: pluginHandle => {
-                videoCallPluginHandle = pluginHandle
-            },
-            error: (cause) => {},
-            onmessage: (msg, jsep) => {
-                // msg 交互信息：create/join/stop
-                // jsep：协商信令
-                onMessage(msg, jsep)
-            },
-            ondata: data => { // data has been received through the Data Channel;
-            },
-            onlocaltrack: (track, added) => {},
-            onremotetrack: (track, mid, added) => {},
-            oncleanup: () => {},
-            detach: () => {}
-        })
-    }
+    janusInst.attach({
+        opaqueId: clientId,
+        plugin: 'janus.plugin.videocall', // 设置需要的插件
+        success: pluginHandle => {
+            videoCallPluginHandle = pluginHandle
+        },
+        error: (cause) => {},
+        onmessage: (msg, jsep) => {
+            // msg 交互信息：create/join/stop
+            // jsep：协商信令
+            onMessage(msg, jsep)
+        },
+        ondata: data => { // data has been received through the Data Channel;
+        },
+        onlocaltrack: (track, added) => {},
+        onremotetrack: (track, mid, added) => {},
+        oncleanup: () => {},
+        detach: () => {}
+    })
+}
 ```
 
 4、经过以上步骤 janus 初始化完毕，接下来注册用户
 
 ```js
-    const registerToJanus = () => {
-        const register = {
-            request: 'register', // 还有 call/accept 等请求，janus 会根据请求处理不同的操作
-            username: clientId
-        }
-
-        videoCallPluginHandle.send({message: regiientId)
+const registerToJanus = () => {
+    const register = {
+        request: 'register', // 还有 call/accept 等请求，janus 会根据请求处理不同的操作
+        username: clientId
     }
+
+    videoCallPluginHandle.send({message: regiientId)
+                               }
 ```
 
 5、发起呼叫请求（创建 Offer）
 
 ```js
-    const createOffer = () => {
-        videoCallPluginHandle.createOffer({
-            // video + audio + datachannel
-            tracks: [
-                {
-                    type: 'screen', // must be one of "audio", "video", "screen" and "data";
-                    // capture: in case something must be captured (e.g., a microphone for "audio" or a "webcam" for video),
-                    // passing true asks for the default device,
-                    // but getUserMedia (for audio/video) or getDisplayMedia (for screen sharing) constraints can be passed as well as objects
-                    capture: navigator.mediaDevices.getDisplayMedia({video: true, audio: false}),
-                },
-                { type: 'data' }
-            ],
-            success: jsep => {
-                const body = {
-                    request: 'call',
-                    username: targetId
-                }
-
-                videoCallPluginHandle.send({
-                    message: body,
-                    jsep
-                })
+const createOffer = () => {
+    videoCallPluginHandle.createOffer({
+        // video + audio + datachannel
+        tracks: [
+            {
+                type: 'screen', // must be one of "audio", "video", "screen" and "data";
+                // capture: in case something must be captured (e.g., a microphone for "audio" or a "webcam" for video),
+                // passing true asks for the default device,
+                // but getUserMedia (for audio/video) or getDisplayMedia (for screen sharing) constraints can be passed as well as objects
+                capture: navigator.mediaDevices.getDisplayMedia({video: true, audio: false}),
             },
-            error: cause => {}
-        })
-    }
+            { type: 'data' }
+        ],
+        success: jsep => {
+            const body = {
+                request: 'call',
+                username: targetId
+            }
+
+            videoCallPluginHandle.send({
+                message: body,
+                jsep
+            })
+        },
+        error: cause => {}
+    })
+}
 ```
 
 6、offer 请求发送后可以在 `janusInst.attach#onmessage` 回调函数中接收到消息，可以在里面根据消息类型进行不同操作的处理
 
 ```js
-    const onMessage = (msg, jsep) => {
-        console.log('::: Received Message :::')
-        console.log(msg)
-        const result = msg['result']
-        if (result) {
+const onMessage = (msg, jsep) => {
+    console.log('::: Received Message :::')
+    console.log(msg)
+    const result = msg['result']
+    if (result) {
 
-            let event = null;
-            if (event = result.event) {
-                switch (event) {
-                    case 'incomingcall':
-                        createAnswer(jsep)
-                        break;
-                    case 'accepted':
-                        onAccepted(jsep)
-                        break;
-                    case 'update':
-                        break;
-                    case 'hangup':
-                        break;
-                    default:
-                        break;
-                }
+        let event = null;
+        if (event = result.event) {
+            switch (event) {
+                case 'incomingcall':
+                    createAnswer(jsep)
+                    break;
+                case 'accepted':
+                    onAccepted(jsep)
+                    break;
+                case 'update':
+                    break;
+                case 'hangup':
+                    break;
+                default:
+                    break;
             }
         }
     }
+}
 ```
 
 7、目标用户接收到 Offer，创建 Answer
 
 ```js
-    const createAnswer = (jsep) => {
-        videoCallPluginHandle.createAnswer({
-            jsep,
-            tracks: [
-                {
-                    type: 'screen',
-                    capture: navigator.mediaDevices.getDisplayMedia({video: true, audio: false}),
-                },
-                { type: 'data' }
-            ],
-            success: innerJsep => {
-                const body = {
-                    request: 'accept'
-                }
-                videoCallPluginHandle.send({
-                    message: body,
-                    jsep: innerJsep
-                })
+const createAnswer = (jsep) => {
+    videoCallPluginHandle.createAnswer({
+        jsep,
+        tracks: [
+            {
+                type: 'screen',
+                capture: navigator.mediaDevices.getDisplayMedia({video: true, audio: false}),
             },
-            error: err => {
-                console.log('createAnswer error: ', err)
+            { type: 'data' }
+        ],
+        success: innerJsep => {
+            const body = {
+                request: 'accept'
             }
-        })
-    }
+            videoCallPluginHandle.send({
+                message: body,
+                jsep: innerJsep
+            })
+        },
+        error: err => {
+            console.log('createAnswer error: ', err)
+        }
+    })
+}
 ```
 
 8、最后双方都会接收到 accept 指令，通话开始
 
 ```js
-    const onAccepted = (jsep) => {
-        console.log('onAccepted jsep: ', jsep)
-        if (jsep) {
-            videoCallPluginHandle.handleRemoteJsep({
-                jsep
-            })
-        }
+const onAccepted = (jsep) => {
+    console.log('onAccepted jsep: ', jsep)
+    if (jsep) {
+        videoCallPluginHandle.handleRemoteJsep({
+            jsep
+        })
     }
+}
 ```
 
 
