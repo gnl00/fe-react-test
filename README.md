@@ -818,6 +818,24 @@ RTMP 推流到 SRS 使用 WebRTC 播放是常见的用法，RTMP 是 30 帧，We
 
 
 
+### SRS 控制台的 “Bug”
+
+SRS 控制台的视频流列表有一个缺陷，只能显示 10 条记录。可以通过修改 `objs/nginx/html/console/js/srs.console.js` 这个文件，来增加显示条数。具体内容如下：
+
+```js
+streams_get: function(success) {
+    // var url = $sc_server.jsonp("/api/v1/streams/");
+    var url = $sc_server.jsonp_query("/api/v1/streams", "count=100");
+    $http.jsonp(url).success(success);
+},
+```
+
+> 参考：https://github.com/ossrs/srs/issues/3451
+
+此外，还可以通过 SRS 提供的 [HTTP-API](https://ossrs.net/lts/zh-cn/docs/v5/doc/http-api#streams) 来获取视频流信息，检查推流是否成功。
+
+
+
 ## Janus 与 SRS 对比
 
 > 引用：https://github.com/ossrs/srs/issues/2296
